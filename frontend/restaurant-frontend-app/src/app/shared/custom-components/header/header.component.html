@@ -1,6 +1,9 @@
 <header class="header">
-  <a class="logo-container" routerLink="/main">
+  <a class="logo-container" routerLink="/main" (click)="onLogoClick()" style="cursor: pointer; user-select: none;">
     <img src="assets/svg/logo_vegeterian.svg" alt="vegetarian image" class="logo-image" />
+    @if (isVipMode()) {
+      <span class="vip-badge" style="background: #ff0055; color: #fff; padding: 2px 6px; font-size: 10px; border-radius: 4px; margin-left: 6px;">VIP CHEF</span>
+    }
   </a>
   @if (!isSubmittedGuestPreorder) {
   <button class="mobile-menu-icon" (click)="toggleMobileMenu()">
@@ -139,6 +142,10 @@
   </nav>
 
   <div class="actions">
+    <button class="button button--secondary button--small" (click)="toggleRoulette()" style="margin-right: 12px;">
+      🎰 Рулетка
+    </button>
+
     @if ((authService.isAuthorised$ | async) === false) {
       <a class="button button--secondary button--large" routerLink="/login">Sign In</a>
     }
@@ -293,4 +300,13 @@
       }
     </div>
   </div>
+}
+
+
+@if (isVipMenuOpen()) {
+  <app-vip-menu (close)="isVipMenuOpen.set(false)"></app-vip-menu>
+}
+
+@if (isRouletteOpen()) {
+  <app-food-roulette (close)="closeRoulette()"></app-food-roulette>
 }

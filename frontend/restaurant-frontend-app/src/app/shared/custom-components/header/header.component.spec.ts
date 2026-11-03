@@ -18,34 +18,34 @@ describe('HeaderComponent', () => {
     authMock = jasmine.createSpyObj<AuthenticationService>(
       'AuthenticationService',
       ['signOut'],
-    {
-      user$: of(null),
-      isAuthorised$: of(false),
-    },
-  );
+      {
+        user$: of(null),
+        isAuthorised$: of(false),
+      },
+    );
   
-  notificationsMock = jasmine.createSpyObj<NotificationsService>(
-    'NotificationsService',
-    ['loadNotifications', 'markAsRead'],
-  );
+    notificationsMock = jasmine.createSpyObj<NotificationsService>(
+      'NotificationsService',
+      ['loadNotifications', 'markAsRead'],
+    );
 
-  notificationsMock.loadNotifications.and.returnValue(of([]));
-  notificationsMock.markAsRead.and.returnValue(of(void 0));
+    notificationsMock.loadNotifications.and.returnValue(of([]));
+    notificationsMock.markAsRead.and.returnValue(of(void 0));
 
-  await TestBed.configureTestingModule({
-    providers: [
-      { provide: API_BASE_URL, useValue: 'https://test.api' },
-      { provide: AuthenticationService, useValue: authMock },
-      { provide: NotificationsService, useValue: notificationsMock },
-      provideRouter([]),
-    ],
-    imports: [HeaderComponent],
-  }).compileComponents();
+    await TestBed.configureTestingModule({
+      providers: [
+        { provide: API_BASE_URL, useValue: 'https://test.api' },
+        { provide: AuthenticationService, useValue: authMock },
+        { provide: NotificationsService, useValue: notificationsMock },
+        provideRouter([]),
+      ],
+      imports: [HeaderComponent],
+    }).compileComponents();
 
-  fixture = TestBed.createComponent(HeaderComponent);
-  component = fixture.componentInstance;
-  fixture.detectChanges();
-});
+    fixture = TestBed.createComponent(HeaderComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
 
   it('should create', () => {
     expect(component).toBeTruthy();

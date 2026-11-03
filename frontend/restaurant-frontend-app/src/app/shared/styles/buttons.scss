@@ -74,45 +74,20 @@ $transition-timing: ease;
   color: color.$neutral-0;
   background: color.$green-600;
   border-color: transparent;
+  box-shadow: 0 4px 12px rgba(15, 122, 55, 0.3);
 
-  // Fade the gradient to reveal the solid background underneath.
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -1.4px;
-    z-index: -1;
-
-    border-radius: inherit;
-    background: color.$green-gradient;
-    opacity: 1;
-    pointer-events: none;
-
-    transition: opacity $transition-duration $transition-timing;
-  }
+  transition: all $transition-duration $transition-timing;
 
   &:hover:not(:disabled):not([aria-disabled='true']) {
-    &::before {
-      opacity: 0;
-    }
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 122, 55, 0.45);
+    background: color.$green-400;
   }
 
   &:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(0);
     background-color: color.$green-800;
-
-    &::before {
-      opacity: 0;
-    }
-  }
-
-  &:disabled,
-  &[aria-disabled='true'] {
-    color: color.$neutral-0;
-    background-color: color.$neutral-400;
-    border-color: color.$neutral-400;
-
-    &::before {
-      opacity: 0;
-    }
+    box-shadow: 0 2px 8px rgba(15, 122, 55, 0.3);
   }
 }
 

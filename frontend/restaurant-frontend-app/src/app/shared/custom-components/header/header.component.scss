@@ -4,8 +4,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px 12px 16px;
-  background-color: color.$neutral-0;
+  padding: 16px 24px;
+  
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 16px;
+  width: calc(100% - 32px);
+  margin: 0 auto 24px;
+  border-radius: 24px;
+  z-index: 1000;
 
   .logo-container {
     display: flex;

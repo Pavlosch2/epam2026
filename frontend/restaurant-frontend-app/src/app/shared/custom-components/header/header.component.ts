@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, signal, computed, effect, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, signal, computed, effect, inject, HostListener } from '@angular/core';
 import { Roles } from '@app/shared/constants/roles';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { UserModel } from '@app/auth/models/user.model';
@@ -9,10 +9,12 @@ import { NotificationsService } from '@app/services/notifications/notifications.
 import { Notification } from '@app/models/notifications/notification.model';
 import { CartComponent } from '@app/components/cart/cart.component';
 import { GuestPreorderStore } from '@app/pages/guest-pre-order-page/state/guest-preorder.store';
+import { FoodRouletteComponent } from '../food-roulette/food-roulette.component';
+import { VipMenuComponent } from '../vip-menu/vip-menu.component';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive, AsyncPipe, CartComponent, CommonModule],
+  imports: [RouterLink, RouterLinkActive, AsyncPipe, CartComponent, CommonModule, FoodRouletteComponent, VipMenuComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -24,23 +26,30 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   protected readonly Roles = Roles;
 
-  //user: UserModel | null = null;
-  //MIGRATION TO SIGNALS user -> signal
   user = signal<UserModel | null>(null);
-
-  //notifications: Notification[] = [];
-  //MIGRATION TO SIGNALS notifications -> signal
   notifications = signal<Notification[]>([]);
-
-  //unreadCount = 0;
-  //MIGRATION TO SIGNALS unreadCount -> computed (instead of manual set)
   unreadCount = computed(() => this.notifications().filter((n) => !n.isRead).length);
 
-  //MIGRATION: UI flags -> signals
+  // UI signals
   showDropdown = signal(false);
   showNotificationsDropdown = signal(false);
   isMobileMenuOpen = signal(false);
   showCart = signal(false);
+
+  // SIGNALS ДЛЯ СЕКРЕТНИХ ФІЧ
+  isVipMode = signal(false);
+  isRouletteOpen = signal(false);
+  isVipMenuOpen = signal(false);
+
+  private logoTapCount = 0;
+  private logoTapTimer?: any;
+
+  private readonly konamiSequence = [
+    'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
+    'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight',
+    'b', 'a'
+  ];
+  private konamiIndex = 0;
 
   private pollingSubscription?: Subscription;
   private userSubscription?: Subscription;
@@ -59,7 +68,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
-    //MIGRATION: keep same behavior as previous user$.subscribe in ngOnInit
     effect(() => {
       const u = this.user();
       if (u?.role === Roles.WAITER) {
@@ -67,7 +75,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
       } else {
         this.stopNotificationsPolling();
         this.notifications.set([]);
-        //this.unreadCount = 0;
       }
     });
   }
@@ -80,13 +87,61 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isDestroyed = true;
     this.stopNotificationsPolling();
     this.userSubscription?.unsubscribe();
+    if (this.logoTapTimer) {
+      clearTimeout(this.logoTapTimer);
+    }
+  }
+
+  // 🎰 ЛОГІКА 5 КЛІКІВ ТА KONAMI CODE
+  onLogoClick(): void {
+    this.logoTapCount++;
+
+    if (this.logoTapTimer) {
+      clearTimeout(this.logoTapTimer);
+    }
+
+    this.logoTapTimer = setTimeout(() => {
+      this.logoTapCount = 0;
+    }, 1500);
+
+    if (this.logoTapCount >= 5) {
+      this.toggleVipMode();
+      this.logoTapCount = 0;
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    if (event.key.toLowerCase() === this.konamiSequence[this.konamiIndex].toLowerCase()) {
+      this.konamiIndex++;
+      if (this.konamiIndex === this.konamiSequence.length) {
+        this.toggleVipMode();
+        this.konamiIndex = 0;
+      }
+    } else {
+      this.konamiIndex = 0;
+    }
+  }
+
+  toggleVipMode(): void {
+    this.isVipMode.update((v) => !v);
+    document.body.classList.toggle('cyberpunk-theme', this.isVipMode());
+
+    if (this.isVipMode()) {
+      this.isVipMenuOpen.set(true);
+    }
+  }
+
+  toggleRoulette(): void {
+    this.isRouletteOpen.update((v) => !v);
+  }
+
+  closeRoulette(): void {
+    this.isRouletteOpen.set(false);
   }
 
   startNotificationsPolling() {
-    if (this.isDestroyed) return;
-
-    //avoid multiple intervals
-    if (this.pollingSubscription) return;
+    if (this.isDestroyed || this.pollingSubscription) return;
 
     setTimeout(() => this.loadNotifications(), 100);
 
@@ -108,77 +163,47 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   loadNotifications() {
     this.notificationsService.loadNotifications().subscribe({
-      next: (notifications) => {
-        this.notifications.set(notifications);
-        //this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
-      },
-      error: (error) => {
-        console.error('Failed to load notifications', error);
-      },
+      next: (notifications) => this.notifications.set(notifications),
+      error: (error) => console.error('Failed to load notifications', error),
     });
   }
 
-  openDropdown(): void {
-    this.showDropdown.set(true);
-  }
+  openDropdown(): void { this.showDropdown.set(true); }
+  closeDropdown(): void { this.showDropdown.set(false); }
 
-  closeDropdown(): void {
-    this.showDropdown.set(false);
-  }
   onDropdownFocusOut(event: FocusEvent): void {
     const wrapper = event.currentTarget as HTMLElement;
     const nextFocusedElement = event.relatedTarget as Node | null;
-    if (nextFocusedElement && wrapper.contains(nextFocusedElement)) {
-      return;
-    }
-
+    if (nextFocusedElement && wrapper.contains(nextFocusedElement)) return;
     this.closeDropdown();
   }
-  toggleMobileMenu() {
-    this.isMobileMenuOpen.update((v) => !v);
-  }
 
-  closeMobileMenu() {
-    this.isMobileMenuOpen.set(false);
-  }
-
+  toggleMobileMenu(): void { this.isMobileMenuOpen.update((v) => !v); }
+  closeMobileMenu(): void { this.isMobileMenuOpen.set(false); }
 
   logout(event?: Event): void {
     event?.stopPropagation();
-
     this.authService.signOut();
-
     this.closeDropdown();
     this.closeMobileMenu();
     this.closeNotificationsDropdown();
     this.showCart.set(false);
-
     void this.router.navigate(['/main']);
   }
 
-  toggleNotificationsDropdown() {
-    this.showNotificationsDropdown.update((v) => !v);
-  }
+  toggleNotificationsDropdown(): void { this.showNotificationsDropdown.update((v) => !v); }
+  closeNotificationsDropdown(): void { this.showNotificationsDropdown.set(false); }
 
-  closeNotificationsDropdown() {
-    this.showNotificationsDropdown.set(false);
-  }
-
-  markNotificationAsRead(notificationId: string) {
+  markNotificationAsRead(notificationId: string): void {
     this.notificationsService.markAsRead(notificationId).subscribe({
       next: () => {
         this.notifications.update((list) =>
           list.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
         );
-        //this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
       },
-      error: (err) => {
-        console.error('Failed to mark notification as read', err);
-      },
+      error: (err) => console.error('Failed to mark notification as read', err),
     });
   }
 
-  toggleCart() {
-    this.showCart.update((v) => !v);
-  }
+  toggleCart(): void { this.showCart.update((v) => !v); }
 }
